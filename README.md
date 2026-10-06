@@ -1,13 +1,4 @@
----
-AIGC:
-  ContentProducer: '001191110102MAD55U9H0F10002'
-  ContentPropagator: '001191110102MAD55U9H0F10002'
-  Label: '1'
-  ProduceID: '189dad72-ce35-4741-85f5-798f68ce2d20'
-  PropagateID: '189dad72-ce35-4741-85f5-798f68ce2d20'
-  ReservedCode1: '003da687-7853-4687-8813-28d07efab243'
-  ReservedCode2: '003da687-7853-4687-8813-28d07efab243'
----
+
 
 # yan botw unexplored
 
