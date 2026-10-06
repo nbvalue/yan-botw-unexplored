@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>BotW Unexplored Web - 呀哈哈查漏地图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; background: #f4f7fb; }
+  #map { position: absolute; inset: 0; cursor: grab; background: #dce8f2; }
+  #map.dragging { cursor: grabbing; }
+  #topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 52px; z-index: 20;
+    background: rgba(255,255,255,.95); border-bottom: 1px solid #dbe5ef;
+    display: flex; align-items: center; gap: 14px; padding: 0 16px;
+    box-shadow: 0 1px 6px rgba(30,60,100,.08);
+  }
+  #topbar h1 { font-size: 16px; color: #1b4965; font-weight: 600; white-space: nowrap; }
+  #topbar .dlc { font-size: 12px; color: #6b7f94; white-space: nowrap; }
+  .btn {
+    display: inline-block; padding: 7px 14px; font-size: 13px; cursor: pointer;
+    background: #2f7fb8; color: #fff; border: none; border-radius: 6px; white-space: nowrap;
+  }
+  .btn:hover { background: #26689c; }
+  .btn.ghost { background: #fff; color: #456; border: 1px solid #b9cadd; }
+  .btn.ghost:hover { background: #eef4fa; }
+  #fileInput { display: none; }
+  #legend {
+    position: fixed; top: 64px; left: 12px; z-index: 20; width: 232px;
+    background: rgba(255,255,255,.96); border: 1px solid #dbe5ef; border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(30,60,100,.10); padding: 10px 12px; font-size: 13px;
+  }
+  #legend h2 { font-size: 13px; color: #345; margin-bottom: 8px; font-weight: 600; }
+  .lg-row { display: flex; align-items: center; gap: 8px; padding: 4px 2px; cursor: pointer; user-select: none; }
+  .lg-row:hover { background: #f0f6fb; border-radius: 4px; }
+  .lg-row input { accent-color: #2f7fb8; width: 14px; height: 14px; cursor: pointer; }
+  .lg-sw { width: 20px; height: 20px; flex: none; display: flex; align-items: center; justify-content: center; }
+  .lg-name { flex: 1; color: #2c3e50; }
+  .lg-count { color: #708090; font-size: 12px; }
+  #hint {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; text-align: center;
+    font-size: 12px; color: #5b7085; padding: 6px; background: rgba(255,255,255,.88);
+    border-top: 1px solid #dbe5ef; pointer-events: none;
+  }
+  #tooltip {
+    position: fixed; z-index: 30; display: none; pointer-events: none;
+    background: rgba(25,40,55,.94); color: #fff; font-size: 12px; line-height: 1.5;
+    padding: 6px 10px; border-radius: 6px; max-width: 280px;
+    box-shadow: 0 3px 12px rgba(0,0,0,.25); white-space: nowrap;
+  }
+  #guide {
+    position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+    background: rgba(235,243,250,.72); backdrop-filter: blur(2px);
+  }
+  #guide .card {
+    background: #fff; border-radius: 12px; padding: 30px 36px; max-width: 520px;
+    box-shadow: 0 8px 40px rgba(30,60,100,.18); text-align: center;
+  }
+  #guide h2 { color: #1b4965; font-size: 20px; margin-bottom: 10px; }
+  #guide p { color: #4c5f72; font-size: 13px; line-height: 1.8; margin-bottom: 16px; text-align: left; }
+  #guide .big { font-size: 15px; padding: 11px 26px; margin: 0 auto 8px; }
+  #guide .tip { font-size: 12px; color: #8598ab; }
+  #toast {
+    position: fixed; top: 66px; left: 50%; transform: translateX(-50%); z-index: 50;
+    background: rgba(25,40,55,.92); color: #fff; padding: 9px 18px; border-radius: 8px;
+    font-size: 13px; display: none; box-shadow: 0 4px 16px rgba(0,0,0,.2);
+  }
+  body.dragover #guide { outline: 4px dashed #2f7fb8; outline-offset: -10px; }
+</style>
+</head>
+<body>
+<canvas id="map"></canvas>
+
+<div id="topbar">
+  <h1>BotW Unexplored <span style="font-weight:400;color:#708090;font-size:12px">PC 网页版</span></h1>
+  <label class="btn" for="fileInput">载入存档 game_data.sav</label>
+  <input type="file" id="fileInput">
+  <span class="dlc" id="dlcInfo"></span>
+  <span style="flex:1"></span>
+  <button class="btn ghost" id="btnReset">清除手动标记</button>
+</div>
+
+<div id="legend"><h2>图例 · 勾选显示内容</h2><div id="legendRows"></div></div>
+<div id="hint">滚轮缩放 · 按住拖动平移 · 点击标记 = 标记为已完成 · 悬停查看详情（进度自动保存在本浏览器）</div>
+<div id="tooltip"></div>
+<div id="toast"></div>
+
+<div id="guide">
+  <div class="card">
+    <h2>呀哈哈查漏地图（PC 网页版）</h2>
+    <p>本工具按 <b>lud99/botw-unexplored</b>（Switch 版）的解析逻辑制作：载入存档后，地图只显示<b>未收集 / 未击败 / 未发现</b>的内容。</p>
+    <p><b>存档文件位置</b>：SD 卡 <code>switch/botw-unexplored/saves/&lt;用户UID&gt;/&lt;槽位&gt;/game_data.sav</code>（0~5 普通，6~7 大师模式）。建议先在 Switch 上打开一次 nro 刷新备份，再取文件。</p>
+    <label class="btn big" for="fileInput">选择 game_data.sav</label>
+    <p class="tip" style="text-align:center">或者直接把存档文件拖进本窗口</p>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+"use strict";
+// ===== 常量（与 lud99 SavefileIO.cpp 一致）=====
+const HASH_DLC = 1186840637; // BalladOfHeroes_Ready
+const SCAN_START = 0x0c, SCAN_STEP = 8;
+const MAP_W = 6000, MAP_H = 5000;      // 底图像素尺寸
+const MAP_CX = 3000, MAP_CY = 2500;    // 世界原点在底图上的位置
+const WORLD_PER_PX = 2;                 // 1px = 2 世界单位
+
+// 图层定义（与 nro 图例一致，图标直接取自 lud99 原版 romfs）
+const LAYERS = [
+  { key:"korok",     label:"克洛格种子",    total:900, color:"#67d84b", border:"#1e7d14", shape:"circle",  icon:"assets/icons/korokseed.png" },
+  { key:"shrine",    label:"祠堂（未解锁）", total:120, color:"#ff9d33", border:"#c05600", shape:"diamond", icon:"assets/icons/shrine.png" },
+  { key:"dlcShrine", label:"DLC 祠堂",      total:16,  color:"#b768e0", border:"#6d1fa0", shape:"diamond", icon:"assets/icons/dlcshrine.png" },
+  { key:"location",  label:"地点",          total:187, color:"#ffb0b0", border:"#d04040", shape:"circle",  icon:null },
+  { key:"hinox",     label:"独眼巨人",      total:40,  color:"#f04a3e", border:"#8f1409", shape:"circle",  icon:"assets/icons/hinox.png" },
+  { key:"talus",     label:"岩巨人",        total:40,  color:"#9aa2ab", border:"#4a5158", shape:"square",  icon:"assets/icons/talus.png" },
+  { key:"molduga",   label:"莫尔德盖拉",    total:4,   color:"#ffd814", border:"#a07800", shape:"diamond", icon:"assets/icons/molduga.png" },
+];
+const TIP_NAMES = { korok:"克洛格种子", shrine:"祠堂", dlcShrine:"DLC 祠堂", location:"地点", hinox:"独眼巨人", talus:"岩巨人", molduga:"莫尔德盖拉" };
+
+// 预加载原版图标
+const ICONS = {};
+LAYERS.forEach(l => { if (l.icon) { const im = new Image(); im.src = l.icon; ICONS[l.key] = im; } });
+
+// ===== 状态 =====
+const state = {
+  layers: {},          // key -> {found, missing[]}
+  visible: {},         // key -> bool（图例开关）
+  manual: {},          // key -> Set(hash) 手动标记
+  hasDLC: null,        // null=未载入
+  loaded: false,
+};
+const LS_KEY = "botw-unexplored-web";
+LAYERS.forEach(l => { state.layers[l.key] = { found: 0, missing: [] }; state.visible[l.key] = true; state.manual[l.key] = new Set(); });
+
+function loadLS() {
+  try {
+    const d = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
+    if (d.manual) for (const k in d.manual) if (state.manual[k]) state.manual[k] = new Set(d.manual[k]);
+    if (d.visible) for (const k in d.visible) if (k in state.visible) state.visible[k] = !!d.visible[k];
+  } catch (e) {}
+}
+function saveLS() {
+  const manual = {}, visible = {};
+  for (const k in state.manual) manual[k] = [...state.manual[k]];
+  for (const k in state.visible) visible[k] = state.visible[k];
+  localStorage.setItem(LS_KEY, JSON.stringify({ manual, visible }));
+}
+
+// ===== Canvas 与视图 =====
+const canvas = document.getElementById("map"), ctx = canvas.getContext("2d");
+const img = new Image(); img.src = "assets/images/BotW-Map.png";
+let DPR = window.devicePixelRatio || 1, W = 0, H = 0;
+const view = { cx: MAP_CX, cy: MAP_CY, zoom: 0.2 };
+
+function resize() {
+  DPR = window.devicePixelRatio || 1;
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  canvas.style.width = W + "px"; canvas.style.height = H + "px";
+  render();
+}
+function worldToScreen(wx, wy) {
+  return [ (MAP_CX + wx / WORLD_PER_PX - view.cx) * view.zoom + W / 2,
+           (MAP_CY + wy / WORLD_PER_PX - view.cy) * view.zoom + H / 2 ];
+}
+function clampView() {
+  const fit = Math.min(W / MAP_W, (H - 52) / MAP_H);
+  view.zoom = Math.max(fit * 0.98, Math.min(14, view.zoom));
+  const halfW = W / 2 / view.zoom, halfH = H / 2 / view.zoom;
+  let xMin = halfW - 400, xMax = MAP_W - halfW + 400;
+  let yMin = halfH - 400, yMax = MAP_H - halfH + 400;
+  if (xMin > xMax) { xMin = xMax = (xMin + xMax) / 2; }  // 整图可见时锁定中心，避免空区间
+  if (yMin > yMax) { yMin = yMax = (yMin + yMax) / 2; }
+  view.cx = Math.max(xMin, Math.min(xMax, view.cx));
+  view.cy = Math.max(yMin, Math.min(yMax, view.cy));
+}
+function fitAll() {
+  view.zoom = Math.min(W / MAP_W, (H - 52) / MAP_H) * 0.98;
+  view.cx = MAP_CX; view.cy = MAP_CY;
+}
+
+// ===== 绘制 =====
+function shape(ctx, shape, sx, sy, c, b, r) {
+  ctx.beginPath();
+  if (shape === "diamond") { ctx.moveTo(sx, sy - r); ctx.lineTo(sx + r, sy); ctx.lineTo(sx, sy + r); ctx.lineTo(sx - r, sy); ctx.closePath(); }
+  else if (shape === "square") ctx.rect(sx - r * .85, sy - r * .85, r * 1.7, r * 1.7);
+  else ctx.arc(sx, sy, r, 0, Math.PI * 2);
+  ctx.fillStyle = c; ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = b; ctx.stroke();
+}
+function render() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  // 底图（只画可视区域）
+  if (img.complete && img.naturalWidth) {
+    const sx0 = view.cx - W / 2 / view.zoom, sy0 = view.cy - H / 2 / view.zoom;
+    const sw = W / view.zoom, sh = H / view.zoom;
+    const cx0 = Math.max(0, sx0), cy0 = Math.max(0, sy0);
+    const cx1 = Math.min(MAP_W, sx0 + sw), cy1 = Math.min(MAP_H, sy0 + sh);
+    if (cx1 > cx0 && cy1 > cy0) {
+      const dx = (cx0 - view.cx) * view.zoom + W / 2, dy = (cy0 - view.cy) * view.zoom + H / 2;
+      ctx.imageSmoothingEnabled = view.zoom < 3;
+      ctx.drawImage(img, cx0, cy0, cx1 - cx0, cy1 - cy0, dx, dy, (cx1 - cx0) * view.zoom, (cy1 - cy0) * view.zoom);
+    }
+  } else {
+    ctx.fillStyle = "#9db8cd"; ctx.font = "14px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("地图加载中…", W / 2, H / 2);
+  }
+  if (!state.loaded) return;
+  // 呀哈哈寻找路径
+  if (state.visible.korok) {
+    ctx.lineWidth = 2.5; ctx.strokeStyle = "rgba(255,255,255,.85)";
+    const paths = BOTW_DATA.korokPaths;
+    for (const k of state.layers.korok.missing) {
+      const p = paths[k.name]; if (!p) continue;
+      ctx.beginPath();
+      p.points.forEach((pt, i) => { const [sx, sy] = worldToScreen(pt.x, pt.y); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); });
+      ctx.stroke();
+    }
+  }
+  // 标记（可见图层）：优先用原版图标绘制，无图标的（地点）用色点
+  const L0 = LAYERS.length - 1;
+  for (let i = L0; i >= 0; i--) {
+    const def = LAYERS[i];
+    if (!state.visible[def.key]) continue;
+    const r = def.key === "location" ? 5 : 7;
+    const ic = ICONS[def.key];
+    const sz = 24;
+    for (const m of state.layers[def.key].missing) {
+      const [sx, sy] = worldToScreen(m.x, m.y);
+      if (sx < -30 || sy < 10 || sx > W + 30 || sy > H + 30) continue;
+      if (ic && ic.complete && ic.naturalWidth) ctx.drawImage(ic, sx - sz / 2, sy - sz / 2, sz, sz);
+      else shape(ctx, def.shape, sx, sy, def.color, def.border, r);
+    }
+  }
+}
+
+// ===== 存档解析（移植 lud99 SavefileIO::ParseFile）=====
+function parseSave(buf) {
+  const dv = new DataView(buf), size = buf.byteLength;
+  const maps = {};
+  LAYERS.forEach(l => {
+    const key = l.key === "korok" ? "koroks" : l.key === "shrine" ? "shrines" : l.key === "dlcShrine" ? "dlcShrines"
+      : l.key === "location" ? "locations" : l.key === "hinox" ? "hinoxes" : l.key === "talus" ? "taluses" : "moldugas";
+    const table = BOTW_DATA[key], m = new Map();
+    for (const it of table) m.set(it.hash, it);
+    maps[l.key] = m;
+  });
+  const res = {}; LAYERS.forEach(l => res[l.key] = { found: 0, missing: [] });
+  let hasDLC = null;
+  for (let off = SCAN_START; off < size - 4; off += SCAN_STEP) {
+    const hash = dv.getUint32(off, true), val = dv.getUint32(off + 4, true);
+    if (hash === HASH_DLC && val === 1) hasDLC = true;
+    for (const l of LAYERS) {
+      const item = maps[l.key].get(hash);
+      if (!item) continue;
+      if (state.manual[l.key].has(hash) || val !== 0) res[l.key].found++;
+      else res[l.key].missing.push(item);
+    }
+  }
+  return { res, hasDLC };
+}
+function applyParse(result) {
+  for (const l of LAYERS) state.layers[l.key] = result.res[l.key];
+  state.hasDLC = result.hasDLC;
+  state.loaded = true;
+  document.getElementById("dlcInfo").textContent = state.hasDLC ? "已检测到 DLC" : (state.hasDLC === false ? "未检测到 DLC" : "");
+  updateLegend(); render(); hideGuide();
+  const k = state.layers.korok;
+  toast("解析完成：呀哈哈 " + k.found + "/" + (k.found + k.missing.length) + "，未完成共 " + LAYERS.reduce((s, l) => s + state.layers[l.key].missing.length, 0) + " 项");
+}
+function loadFile(file) {
+  if (!file) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    try { applyParse(parseSave(fr.result)); }
+    catch (e) { toast("解析失败：不是有效的 game_data.sav 文件"); }
+  };
+  fr.readAsArrayBuffer(file);
+}
+
+// ===== 交互 =====
+let down = null, dragging = false, hover = null;
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  const f = Math.exp(-e.deltaY * 0.0012);
+  const mx = view.cx + (e.clientX - W / 2) / view.zoom, my = view.cy + (e.clientY - H / 2) / view.zoom;
+  view.zoom *= f; clampView();
+  view.cx = mx - (e.clientX - W / 2) / view.zoom; view.cy = my - (e.clientY - H / 2) / view.zoom;
+  clampView(); render();
+}, { passive: false });
+canvas.addEventListener("mousedown", e => { down = { x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy }; dragging = false; });
+window.addEventListener("mousemove", e => {
+  if (down) {
+    if (Math.abs(e.clientX - down.x) + Math.abs(e.clientY - down.y) > 4) { dragging = true; canvas.classList.add("dragging"); }
+    if (dragging) {
+      view.cx = down.cx - (e.clientX - down.x) / view.zoom;
+      view.cy = down.cy - (e.clientY - down.y) / view.zoom;
+      clampView(); render();
+    }
+    return;
+  }
+  const h = hitTest(e.clientX, e.clientY);
+  hover = h; const tip = document.getElementById("tooltip");
+  if (h) {
+    let txt = TIP_NAMES[h.def.key];
+    if (h.def.key === "korok") txt += " · 攻略 #" + (h.m.guide != null ? h.m.guide : "?");
+    if (h.m.name) txt += "：" + h.m.name;
+    txt += "\n点击标记为已完成";
+    tip.textContent = txt.split("\n")[0];
+    tip.style.display = "block";
+    tip.style.left = Math.min(W - tip.offsetWidth - 8, e.clientX + 14) + "px";
+    tip.style.top = (e.clientY + 16) + "px";
+    canvas.style.cursor = "pointer";
+  } else { tip.style.display = "none"; canvas.style.cursor = "grab"; }
+});
+window.addEventListener("mouseup", e => {
+  if (down && !dragging) {
+    const h = hitTest(e.clientX, e.clientY);
+    if (h) {
+      state.manual[h.def.key].add(h.m.hash);
+      const arr = state.layers[h.def.key].missing;
+      arr.splice(arr.indexOf(h.m), 1);
+      state.layers[h.def.key].found++;
+      saveLS(); updateLegend(); render();
+      toast("已标记完成：" + TIP_NAMES[h.def.key] + (h.m.name ? "（" + h.m.name + "）" : "") + " · 已找到 " + state.layers[h.def.key].found + "/" + h.def.total);
+    }
+  }
+  down = null; dragging = false; canvas.classList.remove("dragging");
+});
+function hitTest(sx, sy) {
+  if (!state.loaded) return null;
+  let best = null, bestD = 14 * 14;
+  for (const def of LAYERS) {
+    if (!state.visible[def.key]) continue;
+    for (const m of state.layers[def.key].missing) {
+      const [px, py] = worldToScreen(m.x, m.y);
+      const d = (px - sx) * (px - sx) + (py - sy) * (py - sy);
+      if (d < bestD) { bestD = d; best = { def, m }; }
+    }
+  }
+  return best;
+}
+
+// ===== UI =====
+function updateLegend() {
+  const box = document.getElementById("legendRows"); box.innerHTML = "";
+  for (const def of LAYERS) {
+    const st = state.layers[def.key];
+    const row = document.createElement("label"); row.className = "lg-row";
+    row.innerHTML = '<input type="checkbox" ' + (state.visible[def.key] ? "checked" : "") + '>' +
+      '<span class="lg-sw">' + (def.icon ? '<img src="' + def.icon + '" width="18" height="18" alt="">' : '<span style="display:inline-block;width:12px;height:12px;background:' + def.color + ';border:2px solid ' + def.border + ';border-radius:50%"></span>') + '</span>' +
+      '<span class="lg-name">' + def.label + '</span>' +
+      '<span class="lg-count">' + st.found + "/" + def.total + "</span>";
+    row.querySelector("input").addEventListener("change", ev => {
+      state.visible[def.key] = ev.target.checked; saveLS(); render();
+    });
+    box.appendChild(row);
+  }
+}
+let toastTimer = null;
+function toast(msg) {
+  const t = document.getElementById("toast"); t.textContent = msg; t.style.display = "block";
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.style.display = "none", 3500);
+}
+function hideGuide() { document.getElementById("guide").style.display = "none"; }
+document.getElementById("fileInput").addEventListener("change", e => { loadFile(e.target.files[0]); e.target.value = ""; });
+document.getElementById("btnReset").addEventListener("click", () => {
+  LAYERS.forEach(l => state.manual[l.key] = new Set());
+  saveLS(); toast("已清除全部手动标记（重新载入存档即可恢复真实进度）");
+});
+window.addEventListener("dragover", e => { e.preventDefault(); document.body.classList.add("dragover"); });
+window.addEventListener("dragleave", e => { if (!e.relatedTarget) document.body.classList.remove("dragover"); });
+window.addEventListener("drop", e => {
+  e.preventDefault(); document.body.classList.remove("dragover");
+  if (e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
+});
+window.addEventListener("resize", resize);
+
+// ===== 启动 =====
+loadLS(); resize(); fitAll(); render(); updateLegend();
+img.onload = render;
+</script>
+</body>
+</html>
