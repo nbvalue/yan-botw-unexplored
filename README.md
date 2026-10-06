@@ -1,10 +1,19 @@
-
+---
+AIGC:
+  ContentProducer: '001191110102MAD55U9H0F10002'
+  ContentPropagator: '001191110102MAD55U9H0F10002'
+  Label: '1'
+  ProduceID: '189dad72-ce35-4741-85f5-798f68ce2d20'
+  PropagateID: '189dad72-ce35-4741-85f5-798f68ce2d20'
+  ReservedCode1: '003da687-7853-4687-8813-28d07efab243'
+  ReservedCode2: '003da687-7853-4687-8813-28d07efab243'
+---
 
 # yan botw unexplored
 
 BotW（塞尔达传说 旷野之息）存档查漏地图的 **PC 网页版**，把 Switch homebrew [lud99/botw-unexplored](https://github.com/lud99/botw-unexplored) 的解析逻辑完整移植到浏览器。
 
-**在线演示：https://nbvalue.github.io/yan-botw-unexplorered/**
+**在线演示：https://nbvalue.github.io/yan-botw-unexplored/**
 
 ## 功能
 
@@ -28,7 +37,7 @@ BotW（塞尔达传说 旷野之息）存档查漏地图的 **PC 网页版**，�
 switch/botw-unexplored/saves/<用户UID>/<槽位>/game_data.sav
 ```
 
-槽位 0-5 为普通模式，6-7 为大师模式。
+槽位 0~5 为普通模式，6~7 为大师模式。建议先在 Switch 上打开一次 botw-unexplored nro 刷新备份，再取出文件。
 
 ## 技术说明
 
