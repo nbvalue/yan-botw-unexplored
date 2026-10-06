@@ -1,13 +1,4 @@
----
-AIGC:
-  ContentProducer: '001191110102MAD55U9H0F10002'
-  ContentPropagator: '001191110102MAD55U9H0F10002'
-  Label: '1'
-  ProduceID: '7f61b9bb-3e20-4dbc-8691-038007c046f5'
-  PropagateID: '7f61b9bb-3e20-4dbc-8691-038007c046f5'
-  ReservedCode1: 'a893bc1f-49e6-44a4-b66c-9b0c0bcd14d4'
-  ReservedCode2: 'a893bc1f-49e6-44a4-b66c-9b0c0bcd14d4'
----
+
 
 # yan botw unexplored
 
@@ -37,7 +28,7 @@ BotW（塞尔达传说 旷野之息）存档查漏地图的 **PC 网页版**，�
 switch/botw-unexplored/saves/<用户UID>/<槽位>/game_data.sav
 ```
 
-槽位 0-5 为普通模式，6-7 为大师模式。建议先在 Switch 上打开一次 botw-unexplored nro 刷新备份，再取出文件。
+槽位 0-5 为普通模式，6-7 为大师模式。
 
 ## 技术说明
 
