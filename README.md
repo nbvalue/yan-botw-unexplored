@@ -28,7 +28,7 @@ BotW（塞尔达传说 旷野之息）存档查漏地图的 **PC 网页版**，�
 switch/botw-unexplored/saves/<用户UID>/<槽位>/game_data.sav
 ```
 
-槽位 0~5 为普通模式，6~7 为大师模式。建议先在 Switch 上打开一次 botw-unexplored nro 刷新备份，再取出文件。
+槽位 0-5 为普通模式，6-7 为大师模式。建议先在 Switch 上打开一次 botw-unexplored nro 刷新备份，再取出文件。
 
 ## 技术说明
 
